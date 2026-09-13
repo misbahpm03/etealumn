@@ -125,7 +125,25 @@ export interface DocumentSummary {
   allowDownload: boolean;
   categoryId: Uuid;
   batchId: Uuid | null;
+  submittedAt: IsoDateString | null;
   updatedAt: IsoDateString;
+}
+
+/**
+ * Moderation queue row (staff-only). Owner identity is a display name —
+ * never an email, user id alone, or any other profile field. Category
+ * and batch resolve to names so reviewers never see bare UUIDs.
+ */
+export interface ReviewQueueItem {
+  id: Uuid;
+  title: string;
+  status: Extract<DocumentStatus, "SUBMITTED" | "UNDER_REVIEW">;
+  visibility: DocumentVisibility;
+  submittedAt: IsoDateString | null;
+  ownerId: Uuid;
+  ownerDisplayName: string;
+  categoryName: string;
+  batchName: string | null;
 }
 
 /** Raw member-search input (query params / form — ALWAYS validated). */

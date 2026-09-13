@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   ArchiveActionButton,
+  RevokeGrantButton,
   VisibilityForm,
 } from "@/features/archive/archive-actions";
+import { GrantForm } from "@/features/archive/grant-form";
 import {
   DocumentStatusBadge,
   DocumentVisibilityBadge,
@@ -13,12 +16,18 @@ import {
 import { VersionForm } from "@/features/archive/version-form";
 import {
   createAcademicDocumentService,
+  createDocumentPermissionService,
   requireActiveUser,
 } from "@/infrastructure/supabase/server-session";
 import { ValidationError } from "@/lib/errors";
 import { routes } from "@/lib/routes";
 import { isUuid } from "@/validations/common";
-import type { Document, DocumentVersion, SessionUser } from "@/types";
+import type {
+  Document,
+  DocumentPermission,
+  DocumentVersion,
+  SessionUser,
+} from "@/types";
 
 interface DetailParams {
   id: string;
@@ -110,6 +119,17 @@ export default async function PortalArchiveDetailPage({
         doc.status === "REJECTED" ||
         doc.status === "SUBMITTED"));
 
+  const managesGrants = isOwner || isAdmin;
+  const permissionService =
+    await createDocumentPermissionService(appUser);
+  const grants: ReadonlyArray<DocumentPermission> = managesGrants
+    ? await permissionService.listPermissions(doc.id)
+    : [];
+  const myGrants =
+    !managesGrants && !isStaff
+      ? await permissionService.myPermissions(doc.id)
+      : [];
+
   return (
     <>
       <PageHeader
@@ -181,6 +201,14 @@ export default async function PortalArchiveDetailPage({
                 <VisibilityForm documentId={doc.id} current={doc.visibility} />
               ) : null}
               {showVersionForm ? <VersionForm documentId={doc.id} /> : null}
+              {isOwner && isEditable ? (
+                <Link
+                  href={routes.portal.archiveEdit(doc.id)}
+                  className="text-sm font-medium text-zinc-900 underline-offset-2 hover:underline"
+                >
+                  Edit metadata
+                </Link>
+              ) : null}
               {showDelete ? (
                 <ArchiveActionButton
                   action="softDelete"
@@ -192,6 +220,66 @@ export default async function PortalArchiveDetailPage({
                 />
               ) : null}
             </div>
+          </section>
+        ) : null}
+
+        {managesGrants || myGrants.length > 0 ? (
+          <section aria-label="Permissions">
+            <h2 className="mb-4 text-base font-semibold text-zinc-900">
+              Permissions
+            </h2>
+            {managesGrants ? (
+              <div className="flex flex-col gap-6">
+                <GrantForm documentId={doc.id} />
+                <div>
+                  <h3 className="mb-2 text-sm font-medium text-zinc-900">
+                    Active grants
+                  </h3>
+                  {grants.length === 0 ? (
+                    <p className="text-sm text-zinc-600">
+                      No explicit grants. Visibility and review roles
+                      decide access.
+                    </p>
+                  ) : (
+                    <ul className="flex flex-col gap-2">
+                      {grants.map((grant) => (
+                        <li
+                          key={grant.id}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+                        >
+                          <span className="text-zinc-700">
+                            <span className="font-medium text-zinc-900">
+                              {grant.permission}
+                            </span>{" "}
+                            · {grant.userId.slice(0, 8)}…
+                            {grant.expiresAt
+                              ? ` · expires ${formatDate(grant.expiresAt)}`
+                              : " · no expiry"}
+                          </span>
+                          <RevokeGrantButton
+                            documentId={doc.id}
+                            userId={grant.userId}
+                            permission={grant.permission}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <Card>
+                <p className="text-sm text-zinc-600">
+                  Your access:{" "}
+                  {myGrants
+                    .map(
+                      (grant) =>
+                        `${grant.permission}${grant.expiresAt ? ` (expires ${formatDate(grant.expiresAt)})` : ""}`,
+                    )
+                    .join(", ")}
+                </p>
+              </Card>
+            )}
           </section>
         ) : null}
 

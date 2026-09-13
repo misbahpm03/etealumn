@@ -10,6 +10,7 @@ import {
 } from "@/services/auth/guards";
 import type {
   AuthIdentity,
+  Batch,
   DocumentCategory,
   SessionUser,
   UserRole,
@@ -298,6 +299,7 @@ export async function createAcademicDocumentService(
       permissionsPrivileged: new SupabaseDocumentPermissionRepository(
         privileged,
       ),
+      profilesPrivileged: new SupabaseProfileRepository(privileged),
       categories: new SupabaseDocumentCategoryRepository(request),
       batches: new SupabaseBatchRepository(request),
       audit: new SupabaseAuditLogRepository(privileged),
@@ -365,4 +367,13 @@ export async function listActiveDocumentCategories(): Promise<
 > {
   const request = await createSupabaseServerClient();
   return new SupabaseDocumentCategoryRepository(request).listActive();
+}
+
+/**
+ * Batch reference data for archive pages (request client — batches are
+ * public reference data; RLS scopes nothing away here).
+ */
+export async function listBatches(): Promise<ReadonlyArray<Batch>> {
+  const request = await createSupabaseServerClient();
+  return new SupabaseBatchRepository(request).listAll();
 }

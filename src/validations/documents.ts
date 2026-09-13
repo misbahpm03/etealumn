@@ -56,7 +56,8 @@ const PERMISSIONS: ReadonlyArray<DocumentPermissionKind> = Object.values(
 /**
  * The ONLY legal status transitions. Anything else (including direct
  * DRAFT→APPROVED self-approval) is rejected by the service before any
- * mutation is attempted; RLS column revocation is the backstop.
+ * mutation is attempted; the `documents_lifecycle_guard` database trigger
+ * is the final backstop authority.
  */
 const LIFECYCLE_TRANSITIONS: Record<DocumentStatus, ReadonlyArray<DocumentStatus>> = {
   DRAFT: ["SUBMITTED"],

@@ -32,7 +32,7 @@ const DOCUMENT_COLUMNS =
   "id,owner_id,batch_id,category_id,title,slug,description,abstract,year,supervisor_name,keywords,visibility,status,allow_download,storage_provider,storage_bucket,storage_path,original_filename,mime_type,file_size,submitted_at,approved_at,approved_by,created_at,updated_at,deleted_at" as const;
 
 const SUMMARY_COLUMNS =
-  "id,owner_id,title,slug,description,year,supervisor_name,visibility,status,allow_download,category_id,batch_id,updated_at" as const;
+  "id,owner_id,title,slug,description,year,supervisor_name,visibility,status,allow_download,category_id,batch_id,submitted_at,updated_at" as const;
 
 const VERSION_COLUMNS =
   "id,document_id,version_number,storage_provider,storage_bucket,storage_path,original_filename,mime_type,file_size,change_note,uploaded_by,created_at" as const;
@@ -85,6 +85,7 @@ interface SummaryRow {
   allow_download: boolean;
   category_id: string;
   batch_id: string | null;
+  submitted_at: string | null;
   updated_at: string;
 }
 
@@ -167,6 +168,7 @@ function toSummary(row: SummaryRow): DocumentSummary {
     allowDownload: row.allow_download,
     categoryId: row.category_id,
     batchId: row.batch_id,
+    submittedAt: row.submitted_at,
     updatedAt: row.updated_at,
   };
 }

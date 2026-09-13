@@ -13,6 +13,7 @@ import type {
   DocumentPermissionRepository,
   DocumentRepository,
   DocumentVersionRepository,
+  ProfileRepository,
 } from "@/repositories";
 import type { StorageProvider } from "@/providers/storage.provider";
 import {
@@ -34,9 +35,11 @@ import type {
   Document,
   DocumentFileAccess,
   DocumentPermissionKind,
+  DocumentSearchQuery,
   DocumentStatus,
   DocumentVersion,
   DocumentVisibility,
+  ReviewQueueItem,
   SessionUser,
   UpdateDocumentInput,
   Uuid,
@@ -64,6 +67,8 @@ export interface AcademicDocumentDeps {
   versionStore: DocumentVersionStore;
   /** Privileged (server-side auth checks — never user-controlled reads). */
   permissionsPrivileged: DocumentPermissionRepository;
+  /** Privileged profile reads for queue owner names (names ONLY). */
+  profilesPrivileged: ProfileRepository;
   categories: DocumentCategoryRepository;
   batches: BatchRepository;
   audit: AuditLogRepository;
@@ -74,6 +79,21 @@ export interface AcademicDocumentDeps {
 
 const EDITABLE_STATUSES: ReadonlyArray<DocumentStatus> = ["DRAFT", "REJECTED"];
 const STAFF_ROLES = ["MODERATOR", "ADMIN"] as const;
+
+/** Unfiltered search (queue scoping applies status + RLS only). */
+const EMPTY_SEARCH: DocumentSearchQuery = {
+  text: null,
+  supervisor: null,
+  keyword: null,
+  categoryId: null,
+  batchId: null,
+  year: null,
+  visibility: null,
+  status: null,
+  ownOnly: false,
+  limit: 100,
+  offset: 0,
+};
 
 /**
  * Member document domain service, bound to ONE server-resolved user.
@@ -196,6 +216,70 @@ export class AcademicDocumentService {
     const doc = await this.deps.documents.findById(id);
     if (!doc) throw new NotFoundError("Document");
     return this.deps.versions.listByDocument(id);
+  }
+
+  // ------------------------------------------------------------- queue ---
+  /**
+   * Staff-only moderation queue: SUBMITTED + UNDER_REVIEW rows via the
+   * request client (RLS scopes to review-visible rows), enriched with
+   * owner display names plus category/batch names. Profile reads are
+   * privileged (moderators must not depend on RLS reads of other users'
+   * raw profiles) and project to names ONLY — no emails, phones, or any
+   * other profile field ever enters the DTO. Oldest-submitted first so
+   * the longest-waiting review tops the queue. Unpaginated by design
+   * (minimal queue — revisit if review volume grows).
+   */
+  async listReviewQueue(): Promise<ReadonlyArray<ReviewQueueItem>> {
+    assertAnyRole(this.appUser, STAFF_ROLES);
+    const [submitted, inReview] = await Promise.all([
+      this.deps.documents.search(
+        { ...EMPTY_SEARCH, status: "SUBMITTED" },
+        null,
+      ),
+      this.deps.documents.search(
+        { ...EMPTY_SEARCH, status: "UNDER_REVIEW" },
+        null,
+      ),
+    ]);
+    const rows = [...submitted.rows, ...inReview.rows];
+    const items = await Promise.all(
+      rows.map(async (row) => this.toQueueItem(row)),
+    );
+    return items.sort((a, b) =>
+      (a.submittedAt ?? "").localeCompare(b.submittedAt ?? ""),
+    );
+  }
+
+  private async toQueueItem(row: {
+    id: Uuid;
+    title: string;
+    status: DocumentStatus;
+    visibility: DocumentVisibility;
+    submittedAt: string | null;
+    ownerId: Uuid;
+    categoryId: Uuid;
+    batchId: Uuid | null;
+  }): Promise<ReviewQueueItem> {
+    if (row.status !== "SUBMITTED" && row.status !== "UNDER_REVIEW") {
+      throw new NotFoundError("Document");
+    }
+    const [profile, category, batch] = await Promise.all([
+      this.deps.profilesPrivileged.findByUserId(row.ownerId),
+      this.deps.categories.findById(row.categoryId),
+      row.batchId ? this.deps.batches.findById(row.batchId) : null,
+    ]);
+    return {
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      visibility: row.visibility,
+      submittedAt: row.submittedAt,
+      ownerId: row.ownerId,
+      ownerDisplayName:
+        profile?.displayName ?? profile?.fullName ?? "Former member",
+      categoryName: category?.name ?? "Unknown category",
+      batchName: batch?.name ?? null,
+    };
   }
 
   // ---------------------------------------------------------- download ---

@@ -38,6 +38,8 @@ export const routes = {
     archiveNew: "/portal/archive/new",
     /** Member document page (id-keyed — stable across slug edits). */
     archiveDetail: (id: string) => `/portal/archive/${id}`,
+    /** Owner metadata edit (DRAFT/REJECTED only — enforced server-side). */
+    archiveEdit: (id: string) => `/portal/archive/${id}/edit`,
     opportunities: "/portal/opportunities",
     mentorship: "/portal/mentorship",
     stories: "/portal/stories",
