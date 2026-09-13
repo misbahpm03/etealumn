@@ -8,11 +8,11 @@ database:
 2. **Authenticated member portal** (`/portal/*`) — students & alumni
 3. **Administrative CMS** (`/admin/*`) — moderators & admins
 
-> Status: **Phase 5 — Secure file-storage architecture.** Five private
-> buckets (no client storage policies), provider-agnostic storage provider
-> with staging→finalize moves, version-immutable document service and gated
-> media service, centralized validation. No auth flows, archive/media
-> features, or UI yet.
+> Status: **Phase 6 — Authentication & identity foundation.** Supabase
+> Auth identity + `public.users` role/status, trigger provisioning
+> (STUDENT/PENDING), server sessions with require* guards, sign-in/out,
+> password reset, email verification, and proxy + layout route protection.
+> No member portal features, admin CMS, or role-management UI yet.
 
 ## Stack
 
@@ -86,6 +86,7 @@ docs/
   database.md          # Schema, relationships, constraints, conventions
   security.md          # Authorization model (RLS, grants, helpers)
   storage.md           # Storage architecture (buckets, flows, validation)
+  authentication_architecture.md  # AuthN/Z foundation (identity, sessions, guards)
 ```
 
 ## Architecture rules
@@ -166,3 +167,11 @@ See `.env.example`. Typed access lives in `src/config/env.ts`
   storage service and gated media service; centralized validation and
   server-generated paths. No auth flows, no archive/media features, no UI.
   See `docs/storage.md`.
+- **Phase 6** — Authentication & identity: `handle_new_user` provisioning
+  trigger (STUDENT/PENDING + minimal profile); server session layer with
+  pure guards and require* conveniences; email/password sign-in/out,
+  password reset, verification re-send; `/auth/callback` code exchange;
+  Next 16 request proxy + per-request layout guards sharing one routing
+  table; auth error model and enumeration hygiene; audit-log seam. No
+  portal features, admin CMS, or role-management UI. See
+  `docs/authentication_architecture.md`.

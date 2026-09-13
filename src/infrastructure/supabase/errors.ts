@@ -2,7 +2,9 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import {
   AppError,
   ConflictError,
+  EmailNotVerifiedError,
   ForbiddenError,
+  InvalidCredentialsError,
   NotFoundError,
   ServiceUnavailableError,
   UnauthorizedError,
@@ -73,11 +75,9 @@ export function toAppError(
   // Supabase Auth error codes.
   switch (code) {
     case "invalid_credentials":
-      return new UnauthorizedError("Invalid email or password.");
+      return new InvalidCredentialsError();
     case "email_not_confirmed":
-      return new ForbiddenError(
-        "Please verify your email address, then try again.",
-      );
+      return new EmailNotVerifiedError();
     case "over_request_rate_limit":
       return new ServiceUnavailableError(
         "Too many attempts. Please wait a moment and try again.",

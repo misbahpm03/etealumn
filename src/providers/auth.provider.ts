@@ -19,8 +19,14 @@ export interface AuthProvider {
   signOut(): Promise<void>;
   /** Refresh the session; null when it cannot be refreshed. */
   refreshSession(): Promise<AuthSession | null>;
-  /** Send a password-reset email. Must not reveal if the email exists. */
-  resetPassword(email: string): Promise<void>;
+  /**
+   * Send a password-reset email. Must not reveal if the email exists.
+   * `redirectTo` (absolute URL, allow-listed in the provider dashboard)
+   * is where the reset link lands — the app's auth callback.
+   */
+  resetPassword(email: string, options?: { redirectTo?: string }): Promise<void>;
   /** Update the signed-in user's password. */
   updatePassword(newPassword: string): Promise<void>;
+  /** Re-send the signup-confirmation email. Must not reveal if the email exists. */
+  resendVerificationEmail(email: string): Promise<void>;
 }

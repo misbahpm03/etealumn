@@ -4,17 +4,32 @@ import type {
 } from "@supabase/supabase-js";
 import { ServiceNotConfiguredError } from "@/lib/errors";
 import type { AuthProvider } from "@/providers/auth.provider";
-import type { AuthSession, SessionUser, SignInCredentials } from "@/types";
+import type {
+  AuthSession,
+  IsoDateString,
+  SessionUser,
+  SignInCredentials,
+} from "@/types";
 import { toAppError } from "./errors";
 
 /**
- * Resolves a Supabase auth user id to the application principal (role +
- * status live in our own `users` table, not in Supabase Auth). Wired from
- * the UserRepository in Phase 3; until then, role-bearing methods throw
- * `ServiceNotConfiguredError` instead of fabricating roles.
+ * What the application needs from a Supabase identity to build its own
+ * principal: the auth id (to join `public.users.auth_user_id`) and the
+ * verification timestamp. Role + status always come from `public.users` —
+ * never from JWT claims or client-supplied metadata.
+ */
+export interface SessionUserSource {
+  authUserId: string;
+  emailVerifiedAt: IsoDateString | null;
+}
+
+/**
+ * Resolves a Supabase identity to the application principal (role + status
+ * live in our own `users` table, not in Supabase Auth). Wired from the
+ * `UserRepository` by server callers (see `services/auth/session.ts`).
  */
 export type SessionUserResolver = (
-  supabaseUserId: string,
+  source: SessionUserSource,
 ) => Promise<SessionUser>;
 
 /**
@@ -92,8 +107,13 @@ export class SupabaseAuthProvider implements AuthProvider {
     return this.getSession();
   }
 
-  async resetPassword(email: string): Promise<void> {
-    const { error } = await this.client.auth.resetPasswordForEmail(email);
+  async resetPassword(
+    email: string,
+    options?: { redirectTo?: string },
+  ): Promise<void> {
+    const { error } = await this.client.auth.resetPasswordForEmail(email, {
+      redirectTo: options?.redirectTo,
+    });
     if (error) {
       throw toAppError(
         error,
@@ -111,12 +131,28 @@ export class SupabaseAuthProvider implements AuthProvider {
     }
   }
 
+  async resendVerificationEmail(email: string): Promise<void> {
+    const { error } = await this.client.auth.resend({
+      type: "signup",
+      email,
+    });
+    if (error) {
+      throw toAppError(
+        error,
+        "Could not re-send the verification email. Please try again.",
+      );
+    }
+  }
+
   private async toSessionUser(user: SupabaseUser): Promise<SessionUser> {
     if (!this.resolveSessionUser) {
       throw new ServiceNotConfiguredError(
-        "Session user resolution (wired from the users table in Phase 3)",
+        "Session user resolution (wired from the users table via services/auth)",
       );
     }
-    return this.resolveSessionUser(user.id);
+    return this.resolveSessionUser({
+      authUserId: user.id,
+      emailVerifiedAt: user.email_confirmed_at ?? null,
+    });
   }
 }

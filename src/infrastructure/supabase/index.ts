@@ -6,6 +6,10 @@
  *   modules only.
  * - `./admin` — service-role key + `server-only`; import directly from
  *   server modules only, and only when the anon client cannot do the job.
+ * - `./server-session` — request-scoped session wiring (`server-only`);
+ *   import directly from server actions, route handlers, and layouts only.
+ * - `./middleware-client` — request-proxy-only cookie adapter; import from
+ *   `src/proxy.ts` only.
  * - `./health` — server-side probe used by the dev-only status route.
  */
 export { createSupabaseBrowserClient } from "./client";
@@ -19,3 +23,4 @@ export {
   type SessionUserResolver,
 } from "./supabase-auth.provider";
 export { SupabaseStorageProvider } from "./supabase-storage.provider";
+export { SupabaseUserRepository } from "./supabase-user.repository";

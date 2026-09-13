@@ -5,6 +5,16 @@ export {
   setServiceContext,
 } from "./context";
 export {
+  applySafeNext,
+  assertActiveUser,
+  assertAnyRole,
+  assertAppUser,
+  assertAuthenticated,
+  assertRole,
+  resolvePostAuthDestination,
+  resolveSafeNextPath,
+} from "./auth";
+export {
   AcademicDocumentStorageService,
   MediaStorageService,
   assertSafePath,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { SignOutButton } from "@/features/auth/sign-out-button";
 import type { NavItem } from "@/features/navigation";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -91,10 +92,9 @@ export function DashboardShell({
           <span className="text-sm font-semibold text-zinc-900">{title}</span>
         </Link>
         {navList(`${title} navigation`)}
-        <p className="mt-6 border-t border-zinc-200 px-3 pt-4 text-xs leading-5 text-zinc-500">
-          Signed-in navigation is a placeholder in Phase 1. Route protection
-          lands with authentication in a later phase.
-        </p>
+        <div className="mt-6 border-t border-zinc-200 px-3 pt-4">
+          <SignOutButton className="w-full" />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -121,6 +121,9 @@ export function DashboardShell({
             className="border-b border-zinc-200 bg-white px-4 py-4 sm:px-6 lg:hidden"
           >
             {navList(`${title} mobile navigation`)}
+            <div className="mt-4">
+              <SignOutButton className="w-full" />
+            </div>
           </div>
         ) : null}
 

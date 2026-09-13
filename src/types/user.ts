@@ -25,8 +25,12 @@ export const USER_STATUSES = {
 export type UserStatus = (typeof USER_STATUSES)[keyof typeof USER_STATUSES];
 
 /**
- * Minimal authenticated principal used across the application layer.
- * (Full user/profile entities arrive with the Phase 2 schema.)
+ * Authenticated application principal: Supabase Auth proves identity;
+ * `public.users` supplies role + status (never the JWT, never the browser).
+ * `id` is the application user id (`public.users.id`), NOT the Supabase
+ * `auth.users` id — the two are linked by `users.auth_user_id`.
+ * `emailVerifiedAt` comes from the Supabase user (`email_confirmed_at`);
+ * the application keeps no separate verification flag.
  */
 export interface SessionUser {
   id: Uuid;

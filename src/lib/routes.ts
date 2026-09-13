@@ -13,6 +13,10 @@ export const routes = {
     achievements: "/achievements",
     memory: "/memory",
     signIn: "/signin",
+    forgotPassword: "/forgot-password",
+    resetPassword: "/reset-password",
+    verifyEmail: "/verify-email",
+    accountStatus: "/account-status",
   },
   portal: {
     root: "/portal",
@@ -44,5 +48,9 @@ export const routes = {
   },
   api: {
     health: "/api/health",
+  },
+  auth: {
+    /** Server-side exchange endpoint for email links (verify/reset/invite). */
+    callback: "/auth/callback",
   },
 } as const;
