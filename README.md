@@ -78,6 +78,10 @@ src/
   types/               # Shared domain types & enums (no dependencies)
   validations/         # Pure input-validation helpers (no dependencies)
   config/              # Site metadata, typed env access, storage buckets
+supabase/
+  migrations/          # Versioned PostgreSQL migrations (source of truth)
+docs/
+  database.md          # Schema, relationships, constraints, conventions
 ```
 
 ## Architecture rules
@@ -142,3 +146,8 @@ See `.env.example`. Typed access lives in `src/config/env.ts`
   `SupabaseStorageProvider` behind the Phase 1 interfaces, provider→app
   error translation, repository `unwrapQuery` pattern, dev-only status probe.
   Still no schema, RLS, buckets, auth flows, or features.
+- **Phase 3** — Database foundation: 7 versioned migrations (7 enums,
+  19 tables, 24 FKs, ~60 indexes), document versioning, soft delete,
+  append-only audit trigger, shared `updated_at` trigger, category seeds.
+  No RLS (Phase 4), no buckets, no auth flows, no features. See
+  `docs/database.md`.
