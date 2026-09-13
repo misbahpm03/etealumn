@@ -44,3 +44,8 @@ export {
   ProfileService,
   type ProfileServiceDeps,
 } from "./profile";
+export {
+  PublicBatchService,
+  PublicDirectoryService,
+  type PublicDirectoryDeps,
+} from "./directory";

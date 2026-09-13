@@ -7,6 +7,7 @@ import type {
   SessionUser,
   Uuid,
 } from "@/types";
+import { validateSlug } from "@/validations/directory";
 import { validateRecordId } from "@/validations/profile";
 
 /**
@@ -22,14 +23,14 @@ export class DirectoryProfileService {
   constructor(private readonly directory: PublicProfileRepository) {}
 
   /**
-   * Public listing projection. The view itself restricts rows to ACTIVE +
+   * Public listing projection, keyed by slug (Phase 8: user_id no longer
+   * exists on the public view). The view itself restricts rows to ACTIVE +
    * opted-in + PUBLIC; no requester check needed (anonymous-safe content).
-   * Server-side callers only until the directory phase wires routes.
    */
-  async getPublicProfile(userId: Uuid): Promise<SafePublicProfile | null> {
-    const issues = validateRecordId(userId);
+  async getPublicProfileBySlug(slug: string): Promise<SafePublicProfile | null> {
+    const issues = validateSlug(slug);
     if (issues.length > 0) throw new ValidationError(issues);
-    return this.directory.getPublicProfile(userId);
+    return this.directory.getPublicProfileBySlug(slug);
   }
 
   /**

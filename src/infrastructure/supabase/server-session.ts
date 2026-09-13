@@ -17,6 +17,8 @@ import {
   DirectoryProfileService,
   MediaStorageService,
   ProfileService,
+  PublicBatchService,
+  PublicDirectoryService,
 } from "@/services";
 import { createSupabaseAdminClient } from "./admin";
 import { isNetworkErrorMessage, toAppError } from "./errors";
@@ -228,6 +230,34 @@ export async function createProfileService(
 export async function createDirectoryProfileService(): Promise<DirectoryProfileService> {
   const request = await createSupabaseServerClient();
   return new DirectoryProfileService(
+    new SupabasePublicProfileRepository(request),
+  );
+}
+
+/**
+ * Anonymous-safe public directory service. Reads use the request client
+ * (signed-out ⇒ anon role — the views enforce eligibility); the privileged
+ * client exists ONLY for the photo-path seam (gated on a view hit inside
+ * the service). No identity required.
+ */
+export async function createPublicDirectoryService(): Promise<PublicDirectoryService> {
+  const request = await createSupabaseServerClient();
+  const privileged = createSupabaseAdminClient();
+  return new PublicDirectoryService({
+    directory: new SupabasePublicProfileRepository(request),
+    profilesPrivileged: new SupabaseProfileRepository(privileged),
+    photos: new MediaStorageService(new SupabaseStorageProvider(privileged)),
+  });
+}
+
+/**
+ * Public batch service (request client only — batch metadata is public
+ * reference data and membership comes from the safe projection).
+ */
+export async function createPublicBatchService(): Promise<PublicBatchService> {
+  const request = await createSupabaseServerClient();
+  return new PublicBatchService(
+    new SupabaseBatchRepository(request),
     new SupabasePublicProfileRepository(request),
   );
 }

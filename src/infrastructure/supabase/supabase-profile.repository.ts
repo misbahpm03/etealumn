@@ -15,7 +15,7 @@ import type {
 import { unwrapQuery } from "./errors";
 
 const PROFILE_COLUMNS =
-  "id,user_id,full_name,display_name,profile_photo_path,bio,phone,location,website_url,linkedin_url,facebook_url,github_url,profile_visibility,created_at,updated_at" as const;
+  "id,user_id,full_name,display_name,profile_photo_path,bio,phone,location,website_url,linkedin_url,facebook_url,github_url,profile_slug,profile_visibility,created_at,updated_at" as const;
 
 const PRIVACY_COLUMNS =
   "id,user_id,show_email,show_phone,show_location,show_bio,show_career,show_education,show_social_links,show_profile_publicly,created_at,updated_at" as const;
@@ -33,6 +33,7 @@ interface ProfileRow {
   linkedin_url: string | null;
   facebook_url: string | null;
   github_url: string | null;
+  profile_slug: string | null;
   profile_visibility: DocumentVisibility;
   created_at: string;
   updated_at: string;
@@ -67,6 +68,7 @@ function toProfile(row: ProfileRow): Profile {
     linkedinUrl: row.linkedin_url,
     facebookUrl: row.facebook_url,
     githubUrl: row.github_url,
+    profileSlug: row.profile_slug,
     profileVisibility: row.profile_visibility,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -138,6 +140,17 @@ export class SupabaseProfileRepository implements ProfileRepository {
     return row ? toProfile(row) : null;
   }
 
+  async findBySlug(slug: string): Promise<Profile | null> {
+    const row = (await unwrapQuery(
+      this.client
+        .from("profiles")
+        .select(PROFILE_COLUMNS)
+        .eq("profile_slug", slug)
+        .maybeSingle(),
+    )) as ProfileRow | null;
+    return row ? toProfile(row) : null;
+  }
+
   async create(input: { userId: Uuid; fullName: string }): Promise<Profile> {
     const row = (await unwrapQuery(
       this.client
@@ -146,6 +159,19 @@ export class SupabaseProfileRepository implements ProfileRepository {
         .select(PROFILE_COLUMNS)
         .single(),
     )) as ProfileRow;
+    return toProfile(row);
+  }
+
+  async setSlug(userId: Uuid, slug: string): Promise<Profile> {
+    const row = (await unwrapQuery(
+      this.client
+        .from("profiles")
+        .update({ profile_slug: slug })
+        .eq("user_id", userId)
+        .select(PROFILE_COLUMNS)
+        .maybeSingle(),
+    )) as ProfileRow | null;
+    if (!row) throw new NotFoundError("Profile");
     return toProfile(row);
   }
 

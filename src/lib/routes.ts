@@ -17,6 +17,12 @@ export const routes = {
     resetPassword: "/reset-password",
     verifyEmail: "/verify-email",
     accountStatus: "/account-status",
+    /** Public profile page (slug-keyed — never a user ID). */
+    alumniProfile: (slug: string) => `/alumni/${slug}`,
+    /** Public batch page (batch UUIDs are unguessable reference keys). */
+    batchDetail: (id: string) => `/batches/${id}`,
+    /** Server photo endpoint (verifies eligibility, signs short-lived URLs). */
+    alumniPhoto: (slug: string) => `/api/directory/photo/${slug}`,
   },
   portal: {
     root: "/portal",

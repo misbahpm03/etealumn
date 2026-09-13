@@ -4,6 +4,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "@/lib/errors";
+import { generateProfileSlug } from "@/lib/slug";
 import type {
   AlumniProfileRepository,
   AuditLogRepository,
@@ -113,20 +114,44 @@ export class ProfileService {
     const existing = await this.deps.profilesPrivileged.findByUserId(
       this.userId,
     );
-    if (existing) return existing;
+    if (existing) return this.ensureSlug(existing);
     try {
-      return await this.deps.profilesPrivileged.create({
+      const created = await this.deps.profilesPrivileged.create({
         userId: this.userId,
         fullName: placeholderName(this.appUser.email),
       });
+      return this.ensureSlug(created);
     } catch (error) {
       if (!(error instanceof ConflictError)) throw error;
       const raced = await this.deps.profilesPrivileged.findByUserId(
         this.userId,
       );
       if (!raced) throw error;
-      return raced;
+      return this.ensureSlug(raced);
     }
+  }
+
+  /**
+   * Idempotent public-slug backfill (Phase 8). Slugs are server-generated
+   * (never user input); a UNIQUE collision retries with a fresh suffix.
+   * Failure degrades gracefully: a slugless profile simply cannot appear
+   * publicly, and the next ensure retries.
+   */
+  private async ensureSlug(profile: Profile): Promise<Profile> {
+    if (profile.profileSlug) return profile;
+    const source = profile.displayName ?? profile.fullName;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.deps.profilesPrivileged.setSlug(
+          this.userId,
+          generateProfileSlug(source),
+        );
+      } catch (error) {
+        if (!(error instanceof ConflictError)) throw error;
+      }
+    }
+    console.warn("[profile] slug assignment failed after retries");
+    return profile;
   }
 
   private async ensurePrivacy(): Promise<ProfilePrivacy> {

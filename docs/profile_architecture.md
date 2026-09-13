@@ -58,6 +58,7 @@ Privileged (service-role, server-only) access exists ONLY for:
 | profile/privacy ensure (find + create) | RLS has no self-INSERT for PENDING users by design |
 | student/alumni create + update incl. verified fields | RLS offers no self-service INSERT here by design |
 | audit writes | append-only, no client policy |
+| public photo-path resolution by slug (Phase 8) | paths withheld from public views; lookup always gated on a public-view hit inside `PublicDirectoryService` |
 
 Privileged repos are separate deps (`profilesPrivileged`, `privacyPrivileged`);
 the service never upgrades the request client. Batch reads/writes stay
@@ -83,12 +84,13 @@ admin-side (the service only *links* validated batch ids).
 - `profile_privacy` holds 8 `show*` flags. They are server-managed and are the
   **basis** for future public-directory projections — no feature may query raw
   `profiles.*` for public display.
-- `DirectoryProfileService` (`services/profile/directory.service.ts`) is the
-  only cross-user read abstraction: `getPublicProfile` (UUID-validated, view
-  enforces ACTIVE + visibility) and `getMemberProfile` (ACTIVE requester
-  required; the view applies per-row visibility + per-field flags). No
-  directory UI exists yet; the service + views are the contract future UI
-  must use.
+- Cross-user reads go through the safe projections only. Phase 8 evolved
+  this seam: `DirectoryProfileService.getPublicProfileBySlug`
+  (slug-validated; `user_id` no longer exists on the public view) and the
+  new `PublicDirectoryService` / `PublicBatchService`
+  (`services/directory/`) behind the public directory UI. `getMemberProfile`
+  (ACTIVE requester required) is unchanged. Full contract:
+  `docs/public_directory_architecture.md`.
 
 ## 7. Photo lifecycle (`profile-media`, private bucket)
 

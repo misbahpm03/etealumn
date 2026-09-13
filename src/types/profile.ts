@@ -16,6 +16,7 @@ export interface Profile {
   linkedinUrl: string | null;
   facebookUrl: string | null;
   githubUrl: string | null;
+  profileSlug: string | null;
   profileVisibility: DocumentVisibility;
   createdAt: IsoDateString;
   updatedAt: IsoDateString;
@@ -184,10 +185,44 @@ export interface Batch {
 }
 
 /**
- * Safe public projection (`profiles_public` view). Email, phone, and
- * flag-gated fields are absent by construction — never add raw columns.
+ * Safe public projection (`profiles_public` view, Phase 8 shape).
+ *
+ * Keyed by slug — `userId` is deliberately ABSENT (anonymous clients must
+ * not harvest raw user IDs). Email/phone/socials are present ONLY because
+ * the view NULLs them unless their show_* flag is on; `hasPhoto` replaces
+ * the withheld photo path. Never add raw columns here.
  */
 export interface SafePublicProfile {
+  slug: string;
+  role: "ALUMNI" | "STUDENT" | "FACULTY";
+  fullName: string;
+  displayName: string | null;
+  hasPhoto: boolean;
+  bio: string | null;
+  location: string | null;
+  email: string | null;
+  phone: string | null;
+  websiteUrl: string | null;
+  linkedinUrl: string | null;
+  facebookUrl: string | null;
+  githubUrl: string | null;
+  currentCompany: string | null;
+  currentDesignation: string | null;
+  workLocation: string | null;
+  careerSummary: string | null;
+  graduationYear: number | null;
+  batchId: Uuid | null;
+  batchName: string | null;
+  batchAdmissionYear: number | null;
+  batchGraduationYear: number | null;
+}
+
+/**
+ * Safe member projection (`profiles_member` view, authenticated-only).
+ * Keeps `userId` + photo path: members need stable keys, and the view is
+ * never granted to anon. Public code must use `SafePublicProfile`, never this.
+ */
+export interface SafeMemberProfile {
   userId: Uuid;
   fullName: string;
   displayName: string | null;
@@ -199,9 +234,6 @@ export interface SafePublicProfile {
   facebookUrl: string | null;
   githubUrl: string | null;
 }
-
-/** Safe member projection (`profiles_member` view) — same shape, wider rows. */
-export type SafeMemberProfile = SafePublicProfile;
 
 /** Privacy-flag names for audit metadata (names only, never values). */
 export const PRIVACY_FLAG_NAMES = [

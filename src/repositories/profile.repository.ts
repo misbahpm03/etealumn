@@ -18,9 +18,21 @@ import type { Profile } from "@/types";
  */
 export interface ProfileRepository {
   findByUserId(userId: Uuid): Promise<Profile | null>;
+  /**
+   * Privileged-path lookup by public slug (photo endpoint's path
+   * resolution — always gated on a public-view hit first). On
+   * request-client instances RLS still restricts this to owner/admin rows.
+   */
+  findBySlug(slug: string): Promise<Profile | null>;
   create(input: { userId: Uuid; fullName: string }): Promise<Profile>;
   /** Throws NotFoundError when the caller's row is missing. */
   update(userId: Uuid, input: UpdateProfileInput): Promise<Profile>;
+  /**
+   * Server-generated slug assignment (privileged ensure path only — slugs
+   * are never user input). Throws NotFoundError / ConflictError (retry
+   * with a fresh suffix on collision).
+   */
+  setSlug(userId: Uuid, slug: string): Promise<Profile>;
 }
 
 export interface ProfilePrivacyRepository {
