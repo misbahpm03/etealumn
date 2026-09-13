@@ -24,3 +24,14 @@ export {
 } from "./supabase-auth.provider";
 export { SupabaseStorageProvider } from "./supabase-storage.provider";
 export { SupabaseUserRepository } from "./supabase-user.repository";
+export { SupabaseAuditLogRepository } from "./supabase-audit-log.repository";
+export { SupabaseBatchRepository } from "./supabase-batch.repository";
+export { SupabaseEducationRepository } from "./supabase-education.repository";
+export {
+  SupabaseProfilePrivacyRepository,
+  SupabaseProfileRepository,
+} from "./supabase-profile.repository";
+export { SupabasePublicProfileRepository } from "./supabase-public-profile.repository";
+export { SupabaseAlumniProfileRepository } from "./supabase-alumni-profile.repository";
+export { SupabaseStudentProfileRepository } from "./supabase-student-profile.repository";
+export { SupabaseWorkExperienceRepository } from "./supabase-work-experience.repository";

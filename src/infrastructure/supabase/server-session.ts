@@ -13,11 +13,28 @@ import type {
   SessionUser,
   UserRole,
 } from "@/types";
+import {
+  DirectoryProfileService,
+  MediaStorageService,
+  ProfileService,
+} from "@/services";
 import { createSupabaseAdminClient } from "./admin";
 import { isNetworkErrorMessage, toAppError } from "./errors";
 import { createSupabaseServerClient } from "./server";
 import { SupabaseAuthProvider } from "./supabase-auth.provider";
+import { SupabaseAuditLogRepository } from "./supabase-audit-log.repository";
+import { SupabaseBatchRepository } from "./supabase-batch.repository";
+import { SupabaseEducationRepository } from "./supabase-education.repository";
+import {
+  SupabaseProfilePrivacyRepository,
+  SupabaseProfileRepository,
+} from "./supabase-profile.repository";
+import { SupabasePublicProfileRepository } from "./supabase-public-profile.repository";
+import { SupabaseAlumniProfileRepository } from "./supabase-alumni-profile.repository";
+import { SupabaseStorageProvider } from "./supabase-storage.provider";
+import { SupabaseStudentProfileRepository } from "./supabase-student-profile.repository";
 import { SupabaseUserRepository } from "./supabase-user.repository";
+import { SupabaseWorkExperienceRepository } from "./supabase-work-experience.repository";
 
 /**
  * Request-scoped server session wiring: the ONE place that composes the
@@ -172,4 +189,45 @@ export async function requireAdmin(): Promise<SessionUser> {
 /** Require ACTIVE staff (moderator or admin — mirrors `is_staff()`). */
 export async function requireStaff(): Promise<SessionUser> {
   return requireAnyRole(["MODERATOR", "ADMIN"]);
+}
+
+/**
+ * Per-request ProfileService for a server-resolved user: request-client
+ * repos (RLS self-service) + privileged repos ONLY for the deliberate
+ * server-side seams (ensure, student/alumni upserts, audit, photo
+ * storage). Call with `requireActiveUser()` (portal flows) — the service
+ * re-asserts ACTIVE on every method regardless.
+ */
+export async function createProfileService(
+  appUser: SessionUser,
+): Promise<ProfileService> {
+  const request = await createSupabaseServerClient();
+  const privileged = createSupabaseAdminClient();
+  return new ProfileService(
+    {
+      profiles: new SupabaseProfileRepository(request),
+      profilesPrivileged: new SupabaseProfileRepository(privileged),
+      privacy: new SupabaseProfilePrivacyRepository(request),
+      privacyPrivileged: new SupabaseProfilePrivacyRepository(privileged),
+      students: new SupabaseStudentProfileRepository(privileged),
+      alumni: new SupabaseAlumniProfileRepository(privileged),
+      work: new SupabaseWorkExperienceRepository(request),
+      education: new SupabaseEducationRepository(request),
+      batches: new SupabaseBatchRepository(request),
+      audit: new SupabaseAuditLogRepository(privileged),
+      photos: new MediaStorageService(new SupabaseStorageProvider(privileged)),
+    },
+    appUser,
+  );
+}
+
+/**
+ * Safe-projection directory service (request client — the views enforce
+ * visibility + flags). No directory UI consumes it yet (later phase).
+ */
+export async function createDirectoryProfileService(): Promise<DirectoryProfileService> {
+  const request = await createSupabaseServerClient();
+  return new DirectoryProfileService(
+    new SupabasePublicProfileRepository(request),
+  );
 }

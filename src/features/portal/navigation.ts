@@ -4,6 +4,7 @@ import type { NavItem } from "../navigation";
 /** Member portal navigation (authenticated students & alumni). */
 export const portalNavItems: ReadonlyArray<NavItem> = [
   { href: routes.portal.dashboard, label: "Dashboard" },
+  { href: routes.portal.onboarding, label: "Onboarding" },
   { href: routes.portal.profile, label: "My Profile" },
   { href: routes.portal.archive, label: "Academic Archive" },
   { href: routes.portal.opportunities, label: "Opportunities" },

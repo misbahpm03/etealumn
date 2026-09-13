@@ -21,7 +21,11 @@ export const routes = {
   portal: {
     root: "/portal",
     dashboard: "/portal/dashboard",
+    onboarding: "/portal/onboarding",
     profile: "/portal/profile",
+    profileEdit: "/portal/profile/edit",
+    profileAcademic: "/portal/profile/academic",
+    profileCareer: "/portal/profile/career",
     archive: "/portal/archive",
     opportunities: "/portal/opportunities",
     mentorship: "/portal/mentorship",

@@ -39,3 +39,8 @@ export {
   type VersionUploadFile,
   type VersionUploadResult,
 } from "./storage";
+export {
+  DirectoryProfileService,
+  ProfileService,
+  type ProfileServiceDeps,
+} from "./profile";
