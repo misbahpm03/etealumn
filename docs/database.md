@@ -130,5 +130,7 @@ Only `document_categories` (10 rows, stable slugs, idempotent
 
 - Forward-only Supabase-style files: `supabase/migrations/<timestamp>_*.sql`.
 - Never edit an applied migration; fix forward with a new file.
-- No RLS in these files (Phase 4). No buckets/storage objects (later phase).
+- No RLS in the Phase 3 files; authorization lives in the Phase 4
+  migrations (`2026091301000*_*.sql`) and is documented in
+  `docs/security.md`. No buckets/storage objects (later phase).
 - Validate with real PostgreSQL before merge (see Phase 3 report).

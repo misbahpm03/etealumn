@@ -151,3 +151,7 @@ See `.env.example`. Typed access lives in `src/config/env.ts`
   append-only audit trigger, shared `updated_at` trigger, category seeds.
   No RLS (Phase 4), no buckets, no auth flows, no features. See
   `docs/database.md`.
+- **Phase 4** — Database authorization: deny-by-default RLS on all 19
+  tables, 13 authorization helpers, least-privilege (incl. column-level)
+  grants, single-source document access rule, safe profile projection
+  views. No buckets, no auth flows, no features. See `docs/security.md`.
