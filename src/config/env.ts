@@ -1,3 +1,5 @@
+import { ServiceNotConfiguredError } from "@/lib/errors";
+
 /**
  * Typed environment access.
  *
@@ -5,8 +7,9 @@
  * - Server-only secrets MUST be read via `serverEnv` and never imported from
  *   client components. Service-role credentials stay server-side, always.
  *
- * Values are optional in Phase 1 so the app boots without provider
- * credentials. Later phases validate them at provider-wiring time.
+ * Values are optional at boot so the app starts without provider
+ * credentials. Provider factories call `getSupabasePublicConfig()`, which
+ * throws a structured error when configuration is missing.
  */
 
 export interface PublicEnv {
@@ -27,6 +30,25 @@ export const publicEnv: PublicEnv = {
 /** True once the minimum public provider configuration is present. */
 export function isSupabaseConfigured(): boolean {
   return Boolean(publicEnv.supabaseUrl && publicEnv.supabaseAnonKey);
+}
+
+export interface SupabasePublicConfig {
+  url: string;
+  anonKey: string;
+}
+
+/**
+ * Resolve the public Supabase configuration, throwing a structured
+ * `ServiceNotConfiguredError` when it is absent. Single choke point so
+ * every provider factory fails the same way.
+ */
+export function getSupabasePublicConfig(): SupabasePublicConfig {
+  if (!publicEnv.supabaseUrl || !publicEnv.supabaseAnonKey) {
+    throw new ServiceNotConfiguredError(
+      "Supabase (set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY)",
+    );
+  }
+  return { url: publicEnv.supabaseUrl, anonKey: publicEnv.supabaseAnonKey };
 }
 
 /**

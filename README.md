@@ -8,24 +8,23 @@ database:
 2. **Authenticated member portal** (`/portal/*`) — students & alumni
 3. **Administrative CMS** (`/admin/*`) — moderators & admins
 
-> Status: **Phase 1 — application foundation.** Routes, layouts, provider
-> abstractions, and error/loading foundations only. No database, auth, or
-> feature functionality yet.
+> Status: **Phase 2 — Supabase integration infrastructure.** Provider
+> implementations, client factories, and error translation are in place but
+> unwired: no database schema, auth flows, RLS, buckets, or features yet.
 
 ## Stack
 
 - Next.js (App Router) + React + TypeScript (strict)
 - Tailwind CSS
 - ESLint
-- Supabase-compatible, provider-agnostic architecture (Supabase arrives as the
-  first provider implementation in later phases)
+- Supabase (PostgreSQL + Auth + Storage) behind provider-agnostic interfaces
 - Vercel-compatible deployment
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.example .env.local   # optional in Phase 1; required from Phase 3
+cp .env.example .env.local   # optional until Phase 3; see below
 npm run dev                  # http://localhost:3000
 ```
 
@@ -39,6 +38,7 @@ npm start           # serve the production build
 ```
 
 Health check: `GET /api/health` returns `{ "status": "ok", ... }`.
+Dev-only Supabase probe: `GET /api/dev/supabase` (404s in production).
 
 ## Project structure
 
@@ -48,8 +48,9 @@ src/
     (public)/          # Public website routes + layout
     (portal)/          # Member portal routes + layout
     (admin)/           # Admin CMS routes + layout
-    api/health/        # Health-check route
-    layout.tsx         # Root layout (fonts, metadata, skip link)
+    api/health/        # Public liveness probe
+    api/dev/supabase/  # Dev-only Supabase status (404 in production)
+    layout.tsx         # Root layout (metadata, skip link)
     loading.tsx        # Global loading state
     error.tsx          # Global error boundary
     global-error.tsx   # Root-layout error boundary
@@ -65,6 +66,15 @@ src/
   services/            # Application layer + composition root (DI seam)
   repositories/        # Repository *interfaces* (no provider code)
   providers/           # Provider *interfaces*: AuthProvider, StorageProvider
+  infrastructure/
+    supabase/          # Supabase implementations (ONLY place Supabase lives)
+      client.ts        # Browser client (anon key, RLS applies)
+      server.ts        # Server client (cookies, RLS applies) — server-only
+      admin.ts         # Service-role client (bypasses RLS) — server-only, unused
+      errors.ts        # Provider → AppError translation + unwrapQuery
+      supabase-auth.provider.ts
+      supabase-storage.provider.ts
+      health.ts        # Connectivity probe (booleans + latency only)
   types/               # Shared domain types & enums (no dependencies)
   validations/         # Pure input-validation helpers (no dependencies)
   config/              # Site metadata, typed env access, storage buckets
@@ -73,18 +83,42 @@ src/
 ## Architecture rules
 
 1. **Provider-agnostic.** UI, routes, and services depend on repository/provider
-   interfaces — never on Supabase directly. Provider implementations will live
-   under `src/infrastructure/<provider>/` in later phases.
-2. **No Supabase imports** outside the future infrastructure layer.
-3. **Authorization is server-side.** UI role checks are UX only; enforcement
-   happens in services + PostgreSQL RLS (from Phase 2/3).
-4. **No secrets in client code.** Only `NEXT_PUBLIC_*` vars are browser-safe.
+   interfaces — never on Supabase directly. Supabase code lives ONLY under
+   `src/infrastructure/supabase/`. Verify with:
+   `grep -r "@supabase" src --include="*.ts*" -l` (hits must all be infra).
+2. **No Supabase imports** outside the infrastructure layer.
+3. **Server/client boundaries.** `server.ts` and `admin.ts` import
+   `server-only` and fail the build if pulled into client code. The service
+   role is never exposed to the browser; privileged operations stay server-side.
+4. **Authorization is server-side.** UI role checks are UX only; enforcement
+   happens in services + PostgreSQL RLS (from Phase 3).
+5. **No secrets in client code.** Only `NEXT_PUBLIC_*` vars are browser-safe.
    Service-role keys stay server-side.
-5. **Surfaces stay separate.** Public/portal/admin logic lives in its own
+6. **Errors are translated.** The business layer sees only `AppError`
+   subclasses with user-safe messages; provider details stay on `cause` for
+   server logs. See `infrastructure/supabase/errors.ts`.
+7. **Surfaces stay separate.** Public/portal/admin logic lives in its own
    `features/<surface>` slice; only genuinely shared UI goes in
    `components/ui`.
-6. **Store storage metadata, not URLs.** Business logic records
+8. **Store storage metadata, not URLs.** Business logic records
    provider/bucket/path; signed URLs are minted at access time.
+
+### Repository pattern (for future repositories)
+
+Repository classes take a Supabase client via constructor injection and unwrap
+every query through `unwrapQuery`, which throws translated `AppError`s:
+
+```ts
+async findById(id: Uuid): Promise<SessionUser | null> {
+  const row = await unwrapQuery(
+    this.client.from("users").select("*").eq("id", id).maybeSingle(),
+  );
+  return row ? toSessionUser(row) : null;
+}
+```
+
+No repository implementations exist yet — tables, codegen'd row types, and RLS
+arrive in Phase 3.
 
 ## Environment variables
 
@@ -95,10 +129,16 @@ src/
 | `SUPABASE_SERVICE_ROLE_KEY`    | server | Phase 3+    |
 | `NEXT_PUBLIC_SITE_URL`         | public | optional    |
 
-See `.env.example`. Typed access lives in `src/config/env.ts`.
+See `.env.example`. Typed access lives in `src/config/env.ts`
+(`getSupabasePublicConfig()` throws `ServiceNotConfiguredError` when absent).
 
 ## Phase history
 
 - **Phase 1** — Foundation: scaffold, route structure, layouts, provider
   interfaces, env handling, error/loading/404 foundations. No DB, auth, RLS,
   storage, or feature logic.
+- **Phase 2** — Supabase infrastructure: `@supabase/ssr` browser/server
+  clients, isolated service-role config (unused), `SupabaseAuthProvider` and
+  `SupabaseStorageProvider` behind the Phase 1 interfaces, provider→app
+  error translation, repository `unwrapQuery` pattern, dev-only status probe.
+  Still no schema, RLS, buckets, auth flows, or features.
