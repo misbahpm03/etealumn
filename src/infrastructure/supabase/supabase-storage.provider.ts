@@ -3,6 +3,7 @@ import { STORAGE_LIMITS, type StorageBucket } from "@/config/storage";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import type {
   FileMetadata,
+  MoveInput,
   StorageProvider,
   StoredFile,
   UploadInput,
@@ -29,6 +30,33 @@ export class SupabaseStorageProvider implements StorageProvider {
 
   async replace(input: UploadInput): Promise<StoredFile> {
     return this.upsert(input, true);
+  }
+
+  async move(input: MoveInput): Promise<StoredFile> {
+    const { error } = await this.client.storage
+      .from(this.toPhysicalBucket(input.bucket))
+      .move(input.fromPath, input.toPath);
+    if (error) {
+      throw toAppError(error, "File finalize failed.");
+    }
+    // Re-stat the destination: proves the move landed and yields metadata.
+    const meta = await this.getMetadata(input.bucket, input.toPath);
+    if (meta.sizeBytes === null || meta.mimeType === null) {
+      throw toAppError(
+        { code: "move_verification_failed" },
+        "File finalize failed.",
+      );
+    }
+    return {
+      provider: this.name,
+      bucket: input.bucket,
+      path: meta.path,
+      filename: meta.filename,
+      sizeBytes: meta.sizeBytes,
+      mimeType: meta.mimeType,
+      updatedAt: meta.updatedAt,
+      checksum: null,
+    };
   }
 
   async download(bucket: StorageBucket, path: string): Promise<Blob> {
@@ -69,19 +97,19 @@ export class SupabaseStorageProvider implements StorageProvider {
 
   async getMetadata(bucket: StorageBucket, path: string): Promise<FileMetadata> {
     const match = await this.findObject(bucket, path);
-    if (!match) {
-      throw new NotFoundError("File");
+    if (match) {
+      return {
+        provider: this.name,
+        bucket,
+        path,
+        filename: match.name,
+        sizeBytes: readMetadataNumber(match.metadata, "size"),
+        mimeType: readMetadataString(match.metadata, "mimetype"),
+        updatedAt:
+          typeof match.updated_at === "string" ? match.updated_at : null,
+      };
     }
-    return {
-      provider: this.name,
-      bucket,
-      path,
-      filename: match.name,
-      sizeBytes: readMetadataNumber(match.metadata, "size"),
-      mimeType: readMetadataString(match.metadata, "mimetype"),
-      updatedAt:
-        typeof match.updated_at === "string" ? match.updated_at : null,
-    };
+    throw new NotFoundError("File");
   }
 
   async remove(bucket: StorageBucket, path: string): Promise<void> {

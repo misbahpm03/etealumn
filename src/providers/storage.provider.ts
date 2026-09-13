@@ -36,20 +36,36 @@ export interface UploadInput {
   makePublic?: boolean;
 }
 
+export interface MoveInput {
+  bucket: StorageBucket;
+  fromPath: string;
+  toPath: string;
+}
+
 /**
  * File-storage contract. Supabase Storage is the first implementation
  * (see `src/infrastructure/supabase/supabase-storage.provider.ts`); any
  * S3-compatible (or other) backend can replace it behind this interface.
+ *
+ * Deliberately no `copy`: the finalize flow needs same-location rename
+ * (`move`), and versioning is append-only — nothing ever duplicates bytes.
  */
 export interface StorageProvider {
   readonly name: string;
   /** Upload a new object. Fails if the path already exists. */
   upload(input: UploadInput): Promise<StoredFile>;
   /**
-   * Upload, overwriting any object already stored at the path. Prefer this
-   * over remove+upload so replacements stay atomic from the caller's view.
+   * Upload, overwriting any object already stored at the path. Used ONLY for
+   * unversioned media (e.g. profile photos) — archive files are immutable
+   * and must never be replaced in place; see the document storage service.
    */
   replace(input: UploadInput): Promise<StoredFile>;
+  /**
+   * Rename an object within the SAME bucket (staging → final during the
+   * finalize step). Cross-bucket moves are not supported — staging areas
+   * live inside the destination bucket for exactly this reason.
+   */
+  move(input: MoveInput): Promise<StoredFile>;
   /** Download an object's bytes (caller must already be authorized). */
   download(bucket: StorageBucket, path: string): Promise<Blob>;
   /**

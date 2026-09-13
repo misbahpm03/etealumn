@@ -8,9 +8,11 @@ database:
 2. **Authenticated member portal** (`/portal/*`) — students & alumni
 3. **Administrative CMS** (`/admin/*`) — moderators & admins
 
-> Status: **Phase 2 — Supabase integration infrastructure.** Provider
-> implementations, client factories, and error translation are in place but
-> unwired: no database schema, auth flows, RLS, buckets, or features yet.
+> Status: **Phase 5 — Secure file-storage architecture.** Five private
+> buckets (no client storage policies), provider-agnostic storage provider
+> with staging→finalize moves, version-immutable document service and gated
+> media service, centralized validation. No auth flows, archive/media
+> features, or UI yet.
 
 ## Stack
 
@@ -82,6 +84,8 @@ supabase/
   migrations/          # Versioned PostgreSQL migrations (source of truth)
 docs/
   database.md          # Schema, relationships, constraints, conventions
+  security.md          # Authorization model (RLS, grants, helpers)
+  storage.md           # Storage architecture (buckets, flows, validation)
 ```
 
 ## Architecture rules
@@ -155,3 +159,10 @@ See `.env.example`. Typed access lives in `src/config/env.ts`
   tables, 13 authorization helpers, least-privilege (incl. column-level)
   grants, single-source document access rule, safe profile projection
   views. No buckets, no auth flows, no features. See `docs/security.md`.
+- **Phase 5** — Secure file-storage architecture: 5 private buckets with
+  MIME/size guardrails and zero client storage policies (server-mediated
+  up/downloads, short-lived signed URLs); provider-agnostic
+  `StorageProvider` with same-bucket `move`; version-immutable document
+  storage service and gated media service; centralized validation and
+  server-generated paths. No auth flows, no archive/media features, no UI.
+  See `docs/storage.md`.
