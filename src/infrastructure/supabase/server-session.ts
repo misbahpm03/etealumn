@@ -10,11 +10,16 @@ import {
 } from "@/services/auth/guards";
 import type {
   AuthIdentity,
+  DocumentCategory,
   SessionUser,
   UserRole,
 } from "@/types";
 import {
+  AcademicDocumentService,
+  AcademicDocumentStorageService,
   DirectoryProfileService,
+  DocumentPermissionService,
+  DocumentSearchService,
   MediaStorageService,
   ProfileService,
   PublicBatchService,
@@ -26,12 +31,20 @@ import { createSupabaseServerClient } from "./server";
 import { SupabaseAuthProvider } from "./supabase-auth.provider";
 import { SupabaseAuditLogRepository } from "./supabase-audit-log.repository";
 import { SupabaseBatchRepository } from "./supabase-batch.repository";
+import {
+  SupabaseDocumentCategoryRepository,
+  SupabaseDocumentPermissionRepository,
+  SupabaseDocumentRepository,
+  SupabaseDocumentVersionRepository,
+  SupabaseDocumentVersionStore,
+} from "./supabase-document.repository";
 import { SupabaseEducationRepository } from "./supabase-education.repository";
 import {
   SupabaseProfilePrivacyRepository,
   SupabaseProfileRepository,
 } from "./supabase-profile.repository";
 import { SupabasePublicProfileRepository } from "./supabase-public-profile.repository";
+import { SupabasePublicDocumentRepository } from "./supabase-public-document.repository";
 import { SupabaseAlumniProfileRepository } from "./supabase-alumni-profile.repository";
 import { SupabaseStorageProvider } from "./supabase-storage.provider";
 import { SupabaseStudentProfileRepository } from "./supabase-student-profile.repository";
@@ -260,4 +273,96 @@ export async function createPublicBatchService(): Promise<PublicBatchService> {
     new SupabaseBatchRepository(request),
     new SupabasePublicProfileRepository(request),
   );
+}
+
+/**
+ * Per-request archive service for a server-resolved user: request-client
+ * repos (RLS self-service reads, owner draft edits) + privileged repos
+ * ONLY for the deliberate server-side seams (creation with explicit id,
+ * lifecycle/visibility writes, version inserts, grant checks, audit).
+ * Call with `requireActiveUser()` — the service re-asserts ACTIVE on
+ * every method regardless.
+ */
+export async function createAcademicDocumentService(
+  appUser: SessionUser,
+): Promise<AcademicDocumentService> {
+  const request = await createSupabaseServerClient();
+  const privileged = createSupabaseAdminClient();
+  const versionStore = new SupabaseDocumentVersionStore(privileged);
+  return new AcademicDocumentService(
+    {
+      documents: new SupabaseDocumentRepository(request),
+      documentsPrivileged: new SupabaseDocumentRepository(privileged),
+      versions: new SupabaseDocumentVersionRepository(request),
+      versionStore,
+      permissionsPrivileged: new SupabaseDocumentPermissionRepository(
+        privileged,
+      ),
+      categories: new SupabaseDocumentCategoryRepository(request),
+      batches: new SupabaseBatchRepository(request),
+      audit: new SupabaseAuditLogRepository(privileged),
+      files: new SupabaseStorageProvider(privileged),
+      storage: new AcademicDocumentStorageService(
+        new SupabaseStorageProvider(privileged),
+        versionStore,
+      ),
+    },
+    appUser,
+  );
+}
+
+/**
+ * Per-request grant service: request-client repos for RLS-scoped grant
+ * reads plus privileged repos for the no-direct-SQL grant/revoke seam.
+ * Owner/admin management is enforced in the service, not by the caller.
+ */
+export async function createDocumentPermissionService(
+  appUser: SessionUser,
+): Promise<DocumentPermissionService> {
+  const request = await createSupabaseServerClient();
+  const privileged = createSupabaseAdminClient();
+  return new DocumentPermissionService(
+    {
+      documents: new SupabaseDocumentRepository(request),
+      documentsPrivileged: new SupabaseDocumentRepository(privileged),
+      permissions: new SupabaseDocumentPermissionRepository(request),
+      permissionsPrivileged: new SupabaseDocumentPermissionRepository(
+        privileged,
+      ),
+      usersPrivileged: new SupabaseUserRepository(privileged),
+      audit: new SupabaseAuditLogRepository(privileged),
+    },
+    appUser,
+  );
+}
+
+/**
+ * Auth-constrained discovery: the request client applies RLS inside the
+ * database for member rows and serves the anonymous-safe projection for
+ * public rows. Pass null for signed-out callers (public tier only — the
+ * service rejects member search without a user).
+ */
+export async function createDocumentSearchService(
+  appUser: SessionUser | null,
+): Promise<DocumentSearchService> {
+  const request = await createSupabaseServerClient();
+  return new DocumentSearchService(
+    {
+      documents: new SupabaseDocumentRepository(request),
+      publicDocuments: new SupabasePublicDocumentRepository(request),
+    },
+    appUser,
+  );
+}
+
+/**
+ * Active categories for archive forms (request client — active rows are
+ * public reference data and the query filters to them, so forms only
+ * ever offer submittable options).
+ */
+export async function listActiveDocumentCategories(): Promise<
+  ReadonlyArray<DocumentCategory>
+> {
+  const request = await createSupabaseServerClient();
+  return new SupabaseDocumentCategoryRepository(request).listActive();
 }

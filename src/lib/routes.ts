@@ -23,6 +23,8 @@ export const routes = {
     batchDetail: (id: string) => `/batches/${id}`,
     /** Server photo endpoint (verifies eligibility, signs short-lived URLs). */
     alumniPhoto: (slug: string) => `/api/directory/photo/${slug}`,
+    /** Public document page (APPROVED + PUBLIC projection only). */
+    archiveDetail: (slug: string) => `/archive/${slug}`,
   },
   portal: {
     root: "/portal",
@@ -33,6 +35,9 @@ export const routes = {
     profileAcademic: "/portal/profile/academic",
     profileCareer: "/portal/profile/career",
     archive: "/portal/archive",
+    archiveNew: "/portal/archive/new",
+    /** Member document page (id-keyed — stable across slug edits). */
+    archiveDetail: (id: string) => `/portal/archive/${id}`,
     opportunities: "/portal/opportunities",
     mentorship: "/portal/mentorship",
     stories: "/portal/stories",
@@ -58,6 +63,8 @@ export const routes = {
   },
   api: {
     health: "/api/health",
+    /** Document download endpoint (verifies the download tree, 302s). */
+    archiveDownload: (id: string) => `/api/archive/download/${id}`,
   },
   auth: {
     /** Server-side exchange endpoint for email links (verify/reset/invite). */

@@ -4,9 +4,14 @@ export type {
 export type { AuditLogInput, AuditLogRepository } from "./audit-log.repository";
 export type { BatchRepository } from "./batch.repository";
 export type {
-  ArchiveDocument,
+  CreateDocumentRecord,
+  DocumentCategoryRepository,
+  DocumentPermissionRepository,
   DocumentRepository,
-  ListDocumentsFilter,
+  DocumentStatusWrite,
+  DocumentVersionRepository,
+  GrantPermissionInput,
+  PublicDocumentRepository,
 } from "./document.repository";
 export type {
   EducationRepository,

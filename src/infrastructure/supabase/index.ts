@@ -26,6 +26,14 @@ export { SupabaseStorageProvider } from "./supabase-storage.provider";
 export { SupabaseUserRepository } from "./supabase-user.repository";
 export { SupabaseAuditLogRepository } from "./supabase-audit-log.repository";
 export { SupabaseBatchRepository } from "./supabase-batch.repository";
+export {
+  SupabaseDocumentCategoryRepository,
+  SupabaseDocumentPermissionRepository,
+  SupabaseDocumentRepository,
+  SupabaseDocumentVersionRepository,
+  SupabaseDocumentVersionStore,
+} from "./supabase-document.repository";
+export { SupabasePublicDocumentRepository } from "./supabase-public-document.repository";
 export { SupabaseEducationRepository } from "./supabase-education.repository";
 export {
   SupabaseProfilePrivacyRepository,

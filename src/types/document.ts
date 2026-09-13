@@ -46,3 +46,12 @@ export const DOCUMENT_STATUSES = {
 
 export type DocumentStatus =
   (typeof DOCUMENT_STATUSES)[keyof typeof DOCUMENT_STATUSES];
+
+/** Explicit per-document grants. DOWNLOAD implies nothing — check separately. */
+export const DOCUMENT_PERMISSIONS = {
+  VIEW: "VIEW",
+  DOWNLOAD: "DOWNLOAD",
+} as const;
+
+export type DocumentPermissionKind =
+  (typeof DOCUMENT_PERMISSIONS)[keyof typeof DOCUMENT_PERMISSIONS];

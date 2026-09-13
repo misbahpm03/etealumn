@@ -40,7 +40,20 @@ function randomSuffix(): string {
  * enough that sequential profile enumeration is infeasible.
  */
 export function generateProfileSlug(sourceName: string): string {
-  const namePart = sourceName
+  return `${baseSlug(sourceName, "member")}-${randomSuffix()}`;
+}
+
+/**
+ * Build a unique-candidate slug for an archive document. Same no-oracle
+ * posture as profile slugs: on collision the service retries with a fresh
+ * suffix instead of reporting "taken".
+ */
+export function generateDocumentSlug(title: string): string {
+  return `${baseSlug(title, "document")}-${randomSuffix()}`;
+}
+
+function baseSlug(source: string, fallback: string): string {
+  const namePart = source
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -48,6 +61,5 @@ export function generateProfileSlug(sourceName: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, MAX_NAME_PART_LENGTH)
     .replace(/-+$/g, "");
-  const base = namePart === "" ? "member" : namePart;
-  return `${base}-${randomSuffix()}`;
+  return namePart === "" ? fallback : namePart;
 }

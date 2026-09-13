@@ -1,3 +1,12 @@
+export {
+  AcademicDocumentService,
+  DocumentPermissionService,
+  DocumentSearchService,
+  type AcademicDocumentDeps,
+  type DocumentPermissionDeps,
+  type DocumentSearchDeps,
+  type GrantPermissionArgs,
+} from "./archive";
 export type { ServiceContext } from "./context";
 export {
   getServiceContext,

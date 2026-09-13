@@ -96,6 +96,10 @@ export function toAppError(
       return new ForbiddenError();
     case "22P02": // invalid input syntax
       return new ValidationError();
+    case "23514": // check violation (incl. the lifecycle guard trigger)
+      return new ValidationError([
+        { field: "status", message: "This change is no longer valid." },
+      ]);
   }
 
   // HTTP-style statuses (Supabase Storage reports `statusCode`).

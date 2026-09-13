@@ -49,15 +49,19 @@ export interface DocumentVersionRecord {
 }
 
 /**
- * Narrow database port for version persistence. Implemented alongside the
- * archive repositories in a later phase (Supabase implementation then):
- * `createVersion` must allocate the version number atomically (unique
- * constraint on (document_id, version_number) is the final arbiter — on
- * conflict the caller reloads the document and retries the upload).
+ * Narrow database port for version persistence (Supabase implementation in
+ * `infrastructure/supabase/supabase-document.repository.ts`).
+ *
+ * `versionNumber` is an explicit input (not MAX+1 inside the insert): the
+ * version path is computed from the same number BEFORE the insert, so the
+ * row and the object can never disagree under concurrency. The UNIQUE
+ * (document_id, version_number) constraint is the final arbiter — on
+ * conflict the caller reloads the document and retries the whole upload.
  */
 export interface DocumentVersionStore {
   createVersion(input: {
     documentId: Uuid;
+    versionNumber: number;
     storageBucket: string;
     storagePath: string;
     originalFilename: string;
@@ -191,6 +195,7 @@ export class AcademicDocumentStorageService {
     try {
       ({ versionNumber } = await this.versions.createVersion({
         documentId: doc.id,
+        versionNumber: doc.currentVersion + 1,
         storageBucket: bucket,
         storagePath: moved.path,
         originalFilename: request.file.filename,
