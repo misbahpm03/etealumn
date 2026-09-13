@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/*
+ * System font stacks (no web-font downloads). A dedicated typeface arrives
+ * with the design-system phase; until then this keeps builds hermetic.
+ */
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-zinc-50 font-sans text-zinc-900 antialiased;
+  }
+
+  ::selection {
+    @apply bg-zinc-900 text-white;
+  }
+
+  /*
+   * Visible keyboard focus everywhere by default. Components that render
+   * their own focus treatment must explicitly override this.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-zinc-900);
+    outline-offset: 2px;
+  }
+}
